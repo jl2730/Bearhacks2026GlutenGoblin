@@ -282,6 +282,13 @@ def analyze_barcode():
         traces = " ".join(product.get("traces_tags", [])).lower()
         labels = " ".join(product.get("labels_tags", [])).lower()
 
+        print("PRODUCT:", product_name)
+        print("BRAND:", brand)
+        print("INGREDIENTS:", ingredients)
+        print("ALLERGENS:", allergens)
+        print("TRACES:", traces)
+        print("LABELS:", labels)
+
         combined_text = f"{ingredients} {allergens} {traces} {labels}"
 
         result = analyze_gluten_label(combined_text, logo_found=False)
@@ -294,7 +301,10 @@ def analyze_barcode():
             f"Ingredients found: {'Yes' if ingredients else 'No'}<br>"
             f"Allergen data found: {'Yes' if allergens else 'No'}<br>"
             f"Trace warning data found: {'Yes' if traces else 'No'}<br>"
-            f"Label data found: {'Yes' if labels else 'No'}"
+            f"Label data found: {'Yes' if labels else 'No'}<br><br>"
+            f"Why this result happened:<br>"
+            f"The barcode database may have the product name/brand but may not include enough ingredient, allergen, trace, or certification data to make a confident gluten-safety decision.<br>"
+            f"If this says UNKNOWN, use the front/back photo scan so Cloud Vision can read the actual package."
         )
 
         return jsonify(result)
