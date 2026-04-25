@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gluten Goblin</title>
+</head>
+
+<body>
+
+<h1>🍞 Gluten Goblin 👹</h1>
+<p>Scan a food label and let the goblin inspect it.</p>
+
+<button onclick="document.getElementById('cameraInput').click()">📸 Take Live Picture</button>
+<button onclick="document.getElementById('uploadInput').click()">🖼️ Upload Picture</button>
+
+<input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none;">
+<input type="file" accept="image/*" id="uploadInput" style="display:none;">
+
+<img id="preview" style="max-width:300px; display:none;" />
+
+<button id="analyzeBtn" style="display:none;">Ask the Goblin</button>
+
+<div id="result"></div>
+
+<script>
+  let selectedFile = null;
+
+  const preview = document.getElementById("preview");
+  const analyzeBtn = document.getElementById("analyzeBtn");
+
+  function showPreview(file) {
+    selectedFile = file;
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+    analyzeBtn.style.display = "block";
+  }
+
+  document.getElementById("cameraInput").addEventListener("change", function () {
+    showPreview(this.files[0]);
+  });
+
+  document.getElementById("uploadInput").addEventListener("change", function () {
+    showPreview(this.files[0]);
+  });
+
+  analyzeBtn.addEventListener("click", async function () {
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+
+    document.getElementById("result").innerHTML = "👹 Goblin is inspecting...";
+
+    const response = await fetch("/analyze", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await response.json();
+
+    document.getElementById("result").innerHTML = `
+      <h2>${data.status}</h2>
+      <p>${data.goblin_message}</p>
+      <p>${data.explanation}</p>
+    `;
+  });
+</script>
+
+</body>
+</html>
