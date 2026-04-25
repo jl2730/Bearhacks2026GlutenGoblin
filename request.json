@@ -3,12 +3,15 @@
     {
       "image": {
         "source": {
-          "imageUri": "https://storage.googleapis.com/bearhacks2026gg/gflogo.jpeg"
+          "imageUri": "https://storage.googleapis.com/bearhacks2026gg/check.png"
         }
       },
       "features": [
         {
           "type": "TEXT_DETECTION"
+        },
+        {
+          "type": "LABEL_DETECTION"
         },
         {
           "type": "LOGO_DETECTION"

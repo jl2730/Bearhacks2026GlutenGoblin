@@ -4,59 +4,98 @@ import subprocess
 def analyze_label():
     api_key = "AIzaSyAA5_SEGOqVI_rq3VOgcl6UpuE_BgY3xzM"
     
-    # Load your blacklist from the text file
+    # --- STEP 1: LOAD BLACKLIST ---
     try:
         with open("gluten_ingredients.txt", "r") as f:
             gluten_blacklist = [line.strip().lower() for line in f if line.strip()]
     except FileNotFoundError:
-        print("Error: gluten_ingredients.txt not found!")
-        return
+        gluten_blacklist = ["wheat", "barley", "rye", "malt"]
 
-    # Run the API call
+    # --- STEP 2: CALL GOOGLE VISION API ---
     command = f'curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json "https://vision.googleapis.com/v1/images:annotate?key={api_key}"'
     result = subprocess.check_output(command, shell=True)
     data = json.loads(result)
-
-    # Get the specific response for our image
     response = data['responses'][0]
 
-    print("\n" + "="*40)
-    print("🔍 GLUTEN-FREE ANALYSIS REPORT")
-    print("="*40)
+    # --- STEP 3: DATA EXTRACTION ---
+    all_text = ""
+    if 'textAnnotations' in response:
+        all_text = response['textAnnotations'][0]['description'].lower().replace('\n', ' ')
 
-    # --- PART A: LOGO ANALYSIS ---
-    print("\n[STEP 1: LOGO SCAN]")
+    # 1. Detect Certification
+    has_certification = False
+    cert_info = "None"
     if 'logoAnnotations' in response:
-        for logo in response['logoAnnotations']:
-            brand = logo['description']
-            print(f"✅ FOUND LOGO: {brand}")
-            print(f"   Reason: Google identified the official '{brand}' symbol on the packaging.")
+        has_certification = True
+        cert_info = "Certified GF"
+    elif any(marker in all_text for marker in ["gfco", "certified gluten", "cca"]):
+        has_certification = True
+        cert_info = "Certified GF"
+
+    # 2. Detect Manufacturer's Claim
+    has_claim = "gluten free" in all_text or "gluten-free" in all_text
+
+    # 3. ADVANCED ANALYSIS: Ingredients vs. Warnings
+    found_in_ingredients = []
+    warned_in_may_contain = False
+    
+    # Split text at "may contain" to separate the actual ingredients from the warning
+    if "may contain" in all_text:
+        parts = all_text.split("may contain")
+        ingredient_section = parts[0]
+        warning_section = parts[1]
+        
+        # Check if wheat/barley/rye is in the actual ingredient list
+        found_in_ingredients = [item for item in gluten_blacklist if item in ingredient_section]
+        
+        # Check if the warning section mentions gluten
+        if any(g_source in warning_section for g_source in ["wheat", "barley", "rye", "gluten"]):
+            warned_in_may_contain = True
     else:
-        print("ℹ️  No official certification logos detected.")
+        # If no "may contain" exists, check the whole text for blacklisted items
+        found_in_ingredients = [item for item in gluten_blacklist if item in all_text]
 
-    # --- PART B: TEXT/INGREDIENT ANALYSIS ---
-    print("\n[STEP 2: INGREDIENT SCAN]")
-    try:
-        detected_text = response['fullTextAnnotation']['text'].lower()
-        
-        # Check for the claim
-        if "gluten free" in detected_text:
-            print("✅ FOUND TEXT: 'Gluten Free'")
-            print("   Reason: The manufacturer has printed a gluten-free claim on the label.")
+    # --- STEP 4: FINAL REPORT OUTPUT ---
+    print("\n" + "="*50)
+    print("🛡️  GLUTEN-FREE SAFETY ANALYSIS REPORT")
+    print("="*50)
 
-        # Check for forbidden ingredients
-        found_bad_stuff = [item for item in gluten_blacklist if item in detected_text]
-        
-        if found_bad_stuff:
-            print(f"❌ DANGER: Contains {', '.join(found_bad_stuff)}")
-            print(f"   Reason: These ingredients were found in the text and match your 'ingredients.txt' blacklist.")
+    if found_in_ingredients:
+        # LEVEL: NOT SAFE (Actual Ingredients)
+        print("🔴 STATUS: NOT SAFE")
+        print(f"❌ DANGER: Contains blacklisted ingredients: {', '.join(found_in_ingredients).upper()}")
+        print("👉 Do not consume. These ingredients are definite sources of gluten.")
+    
+    elif warned_in_may_contain:
+        # LEVEL: CAUTION (The "Unreal Gems" Case)
+        print("🟡 STATUS: CAUTION")
+        if has_certification:
+            print(f"⚠️  Detected: {cert_info}")
+            print("⚠️  Warning: Label mentions potential cross-contact (May contain wheat).")
+            print("👉 Certified safe (<20ppm), but contains a shared facility warning.")
         else:
-            print("👍 CLEAN: No blacklisted ingredients found in the text.")
+            print("⚠️  DANGER: Potential cross-contamination (May contain wheat).")
+            print("👉 No certification found to verify safety in a shared facility.")
 
-    except KeyError:
-        print("⚠️  Error: Could not read any text from this image.")
+    elif has_certification:
+        print("🟢 STATUS: SAFE")
+        print(f"✅ Verified: {cert_info} detected.")
+        print("👉 High confidence: Certified and no warnings found.")
 
-    print("\n" + "="*40)
+    elif has_claim:
+        print("🟡 STATUS: CAUTION")
+        print("⚠️  Manufacturer claims 'Gluten Free' but no certification was detected.")
+
+    else:
+        print("⚪ STATUS: UNKNOWN")
+
+    # TECHNICAL BREAKDOWN
+    print("\n[TECHNICAL BREAKDOWN]")
+    print(f" - OCR Text Found:  {'Yes' if all_text else 'No'}")
+    print(f" - Certification:   {cert_info}")
+    print(f" - Mfr GF Claim:    {'Yes' if has_claim else 'No'}")
+    print(f" - Facility Warn:   {'Yes' if warned_in_may_contain else 'No'}")
+    print("="*50 + "\n")
 
 if __name__ == "__main__":
     analyze_label()
