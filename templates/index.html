@@ -2,66 +2,203 @@
 <html>
 <head>
   <title>Gluten Goblin</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 
 <body>
 
-<h1>🍞 Gluten Goblin 👹</h1>
-<p>Scan a food label and let the goblin inspect it.</p>
+  <h1>🍞 Gluten Goblin 👹</h1>
+  <p>Scan a barcode or food label and let the goblin inspect it.</p>
 
-<button onclick="document.getElementById('cameraInput').click()">📸 Take Live Picture</button>
-<button onclick="document.getElementById('uploadInput').click()">🖼️ Upload Picture</button>
+  <h3>🔎 Scan Barcode</h3>
 
-<input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none;">
-<input type="file" accept="image/*" id="uploadInput" style="display:none;">
+  <button id="startScannerBtn">Start Barcode Scanner</button>
+  <button id="stopScannerBtn" style="display:none;">Stop Scanner</button>
 
-<img id="preview" style="max-width:300px; display:none;" />
+  <div id="reader" style="width:300px; display:none;"></div>
 
-<button id="analyzeBtn" style="display:none;">Ask the Goblin</button>
+  <br><br>
 
-<div id="result"></div>
+  <input type="text" id="barcodeInput" placeholder="Or enter barcode manually">
+  <button id="barcodeBtn">Ask Goblin by Barcode</button>
 
-<script>
-  let selectedFile = null;
+  <hr>
 
-  const preview = document.getElementById("preview");
-  const analyzeBtn = document.getElementById("analyzeBtn");
+  <h3>📸 Photo Backup</h3>
 
-  function showPreview(file) {
-    selectedFile = file;
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = "block";
+<button onclick="document.getElementById('frontInput').click()">📸 Take Front Picture</button>
+<button onclick="document.getElementById('backInput').click()">📸 Take Back Picture</button>
+
+<input type="file" accept="image/*" capture="environment" id="frontInput" style="display:none;">
+<input type="file" accept="image/*" capture="environment" id="backInput" style="display:none;">
+
+<br><br>
+
+<p>Front Preview:</p>
+<img id="frontPreview" style="max-width:250px; display:none;" />
+
+<p>Back Preview:</p>
+<img id="backPreview" style="max-width:250px; display:none;" />
+
+<br><br>
+
+<button id="analyzeBtn" style="display:none;">Ask the Goblin by Photos</button>
+  <br><br>
+
+  <video 
+    id="goblinVideo" 
+    autoplay 
+    muted 
+    loop 
+    playsinline
+    style="display:none; width:320px;"
+  ></video>
+
+  <div id="result"></div>
+
+  <script>
+    let scanner = null;
+    let frontFile = null;
+    let backFile = null;
+
+    const frontPreview = document.getElementById("frontPreview");
+    const backPreview = document.getElementById("backPreview");
+
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const goblinVideo = document.getElementById("goblinVideo");
+    const resultDiv = document.getElementById("result");
+
+    function playGoblin(status) {
+      if (status === "SAFE") {
+        goblinVideo.src = "/static/videos/goblin-happy.mp4";
+      } 
+      else if (status === "AVOID") {
+        goblinVideo.src = "/static/videos/goblin-scream.mp4";
+      } 
+      else {
+        goblinVideo.src = "/static/videos/goblin-caution.mp4";
+      }
+
+      goblinVideo.style.display = "block";
+      goblinVideo.load();
+      goblinVideo.play();
+    }
+
+    function showResult(data) {
+      playGoblin(data.status);
+
+      resultDiv.innerHTML = `
+        <h2>${data.status}</h2>
+        <h3>${data.product_name || ""}</h3>
+        <p>${data.goblin_message}</p>
+        <div>${data.explanation}</div>
+      `;
+    }
+
+function checkPhotosReady() {
+  if (frontFile && backFile) {
     analyzeBtn.style.display = "block";
   }
+}
 
-  document.getElementById("cameraInput").addEventListener("change", function () {
-    showPreview(this.files[0]);
+document.getElementById("frontInput").addEventListener("change", function () {
+  frontFile = this.files[0];
+  frontPreview.src = URL.createObjectURL(frontFile);
+  frontPreview.style.display = "block";
+  checkPhotosReady();
+});
+
+document.getElementById("backInput").addEventListener("change", function () {
+  backFile = this.files[0];
+  backPreview.src = URL.createObjectURL(backFile);
+  backPreview.style.display = "block";
+  checkPhotosReady();
+});
+
+analyzeBtn.addEventListener("click", async function () {
+  const formData = new FormData();
+  formData.append("front_image", frontFile);
+  formData.append("back_image", backFile);
+
+  resultDiv.innerHTML = "👹 Goblin is inspecting both sides...";
+  goblinVideo.style.display = "none";
+
+  const response = await fetch("/analyze", {
+    method: "POST",
+    body: formData
   });
 
-  document.getElementById("uploadInput").addEventListener("change", function () {
-    showPreview(this.files[0]);
-  });
+  const data = await response.json();
+  showResult(data);
+});
 
-  analyzeBtn.addEventListener("click", async function () {
-    const formData = new FormData();
-    formData.append("image", selectedFile);
+    async function analyzeBarcode(barcode) {
+      if (!barcode) {
+        resultDiv.innerHTML = "👹 Please enter or scan a barcode first.";
+        return;
+      }
 
-    document.getElementById("result").innerHTML = "👹 Goblin is inspecting...";
+      resultDiv.innerHTML = "👹 Goblin is checking the barcode...";
+      goblinVideo.style.display = "none";
 
-    const response = await fetch("/analyze", {
-      method: "POST",
-      body: formData
+      const response = await fetch("/analyze-barcode", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ barcode: barcode })
+      });
+
+      const data = await response.json();
+      showResult(data);
+    }
+
+    document.getElementById("barcodeBtn").addEventListener("click", function () {
+      const barcode = document.getElementById("barcodeInput").value.trim();
+      analyzeBarcode(barcode);
     });
 
-    const data = await response.json();
+    document.getElementById("startScannerBtn").addEventListener("click", async function () {
+  document.getElementById("reader").style.display = "block";
+  document.getElementById("stopScannerBtn").style.display = "inline-block";
+  resultDiv.innerHTML = "📷 Point camera at barcode...";
 
-    document.getElementById("result").innerHTML = `
-      <h2>${data.status}</h2>
-      <p>${data.goblin_message}</p>
-      <p>${data.explanation}</p>
-    `;
-  });
-</script>
+  scanner = new Html5Qrcode("reader");
+
+  try {
+    await scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 12,
+        qrbox: { width: 300, height: 150 },
+        aspectRatio: 1.777,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODE_128
+        ]
+      },
+      async function (decodedText) {
+        document.getElementById("barcodeInput").value = decodedText;
+
+        await scanner.stop();
+
+        document.getElementById("reader").style.display = "none";
+        document.getElementById("stopScannerBtn").style.display = "none";
+
+        analyzeBarcode(decodedText);
+      },
+      function (errorMessage) {
+        // keep scanning
+      }
+    );
+  } catch (err) {
+    resultDiv.innerHTML = "❌ Camera scanner failed: " + err;
+  }
+});
+  </script>
 
 </body>
 </html>

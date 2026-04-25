@@ -2,7 +2,7 @@ import json
 import subprocess
 
 def analyze_label():
-    api_key = "AIzaSyAA5_SEGOqVI_rq3VOgcl6UpuE_BgY3xzM"
+    api_key = "AIzaSyB4WY2wfsyJg_-IFOyz51Hv9S0X6FhcI9U"
     
     # --- STEP 1: LOAD BLACKLIST ---
     try:
