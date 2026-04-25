@@ -1,0 +1,19 @@
+{
+  "requests": [
+    {
+      "image": {
+        "source": {
+          "imageUri": "https://storage.googleapis.com/bearhacks2026gg/gflogo.jpeg"
+        }
+      },
+      "features": [
+        {
+          "type": "TEXT_DETECTION"
+        },
+        {
+          "type": "LOGO_DETECTION"
+        }
+      ]
+    }
+  ]
+}   
