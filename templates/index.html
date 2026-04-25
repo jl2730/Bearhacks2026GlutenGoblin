@@ -141,16 +141,16 @@
 
     }
 
-    async function showResult(data) {
-      resultDiv.innerHTML = `
-      <h2>${data.status}</h2>
-      <h3>${data.product_name || ""}</h3>
-      <p>${data.goblin_message}</p>
-      <div>${data.explanation}</div>
-    `;
+   async function showResult(data) {
+  resultDiv.innerHTML = `
+    <h2>${data.headline || data.status}</h2>
+    <h3>${data.product_name || ""}</h3>
+    <p>${data.goblin_message}</p>
+    <div>${data.explanation}</div>
+  `;
 
-      await playGoblin(data.status);
-    }
+  await playGoblin(data.status);
+}
 
     function checkPhotosReady() {
       if (frontFile && backFile) {

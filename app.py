@@ -115,77 +115,72 @@ def analyze_gluten_label(label_text, logo_found):
             item for item in gluten_blacklist
             if contains_gluten_term(label_text, item)
         ]
+# -------------AVOID---------------
 
     if found_in_ingredients:
         return {
-            "status": "AVOID",
-            "goblin_message": "🚫 THE GOBLIN SCREAMS! Back away from the snack!",
-            "explanation": (
-                f"🛡️ GLUTEN-FREE SAFETY ANALYSIS REPORT<br><br>"
-                f"🔴 STATUS: NOT SAFE<br>"
-                f"❌ Danger: Found gluten-risk ingredient(s): {', '.join(found_in_ingredients).upper()}<br>"
-                f"👉 Do not consume if you need to avoid gluten for celiac safety."
-            )
+              "status": "AVOID",
+            "headline": "🔴 AVOID",
+            "goblin_message": "🚫 The goblin screams! Step away from the snack.",
+            "explanation": f"""
+            Gluten ingredients were detected.<br><br>
+            <b>Why:</b><br>
+            • {', '.join(found_in_ingredients).title()}<br><br>
+            <b>Goblin Tip:</b><br>
+            Choose a certified gluten-free alternative.
+            """
         }
-
+# ---------- CAUTION --------- 
     if warned_in_may_contain:
-        if has_certification:
-            explanation = (
-                f"🛡️ GLUTEN-FREE SAFETY ANALYSIS REPORT<br><br>"
-                f"🟡 STATUS: CAUTION<br>"
-                f"⚠️ Gluten-free certification/marker was detected, but the label also mentions a possible cross-contact warning.<br>"
-                f"👉 This often means shared facility or equipment. Certification usually involves controls/testing, but this app cannot guarantee safety."
-            )
-        else:
-            explanation = (
-                f"🛡️ GLUTEN-FREE SAFETY ANALYSIS REPORT<br><br>"
-                f"🟡 STATUS: CAUTION<br>"
-                f"⚠️ Warning: Product may contain wheat/gluten or has cross-contact risk.<br>"
-                f"👉 No certification was detected to verify safety in a shared facility."
-            )
-
-        return {
+         return {
             "status": "CAUTION",
-            "goblin_message": "⚠️ Suspicious crumbs detected.",
-            "explanation": explanation
-        }
+            "headline": "🟡 USE CAUTION",
+            "goblin_message": "⚠️ The goblin smells suspicious crumbs.",
+            "explanation": """
+            This product may have cross-contact risk.<br><br>
 
+            <b>Why:</b><br>
+            • “May contain” allergen warning detected<br>
+            • Shared facility/equipment possible<br><br>
+
+            <b>Goblin Tip:</b><br>
+            Choose certified gluten-free if highly sensitive.
+            """
+        }
+ # -------- SAFE ------------ 
     if has_certification:
         return {
             "status": "SAFE",
-            "goblin_message": "🎶 The goblin sings! You may feast, traveler!",
-            "explanation": (
-                f"🛡️ GLUTEN-FREE SAFETY ANALYSIS REPORT<br><br>"
-                f"🟢 STATUS: SAFE<br>"
-                f"✅ Gluten-free certification/marker detected.<br>"
-                f"👉 No obvious gluten-risk ingredients or warning text were found.<br>"
-                f"⚠️ This app cannot guarantee zero risk, but this appears to be a safer choice."
-            )
-        }
+            "headline": "🟢 SAFE TO ENJOY",
+            "goblin_message": "🎉 The goblin approves this snack.",
+            "explanation": """
+            No obvious gluten risks were detected.<br><br>
 
+            <b>Why:</b><br>
+            • Gluten-free certification or trusted marker found<br>
+            • No wheat, barley, rye, or malt detected<br><br>
+
+            <b>Goblin Tip:</b><br>
+            Always re-check labels when packaging changes.
+            """
+        }
+# claim only 
     if has_claim:
-        return {
+         return {
             "status": "CAUTION",
-            "goblin_message": "⚠️ The goblin sees a gluten-free claim, but wants proof.",
-            "explanation": (
-                f"🛡️ GLUTEN-FREE SAFETY ANALYSIS REPORT<br><br>"
-                f"🟡 STATUS: CAUTION<br>"
-                f"⚠️ Manufacturer claims gluten-free, but certification was not clearly detected.<br>"
-                f"👉 It may be okay, but certification gives stronger confidence for celiac safety."
-            )
+            "headline": "🟡 LIKELY SAFE",
+            "goblin_message": "🙂 The goblin sees a gluten-free claim.",
+            "explanation": """
+            Product claims to be gluten-free, but certification was not confirmed.<br><br>
+
+            <b>Why:</b><br>
+            • Gluten-free wording detected<br>
+            • No major gluten ingredients found<br><br>
+
+            <b>Goblin Tip:</b><br>
+            Certified products offer stronger confidence.
+            """
         }
-
-    return {
-        "status": "UNKNOWN",
-        "goblin_message": "👹 The goblin cannot decide.",
-        "explanation": (
-            f"🛡️ GLUTEN-FREE SAFETY ANALYSIS REPORT<br><br>"
-            f"⚪ STATUS: UNKNOWN<br>"
-            f"❔ No clear gluten-free certification, gluten-free claim, gluten-risk ingredient, or warning was found.<br>"
-            f"👉 Try a clearer photo of the ingredients/allergen statement or check manually."
-        )
-    }
-
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
@@ -210,14 +205,6 @@ def analyze():
         result = analyze_gluten_label(combined_text, logo_found)
 
         result["product_name"] = "Photo Scan Result"
-        result["explanation"] += (
-            f"<br><br>"
-            f"Detected from: Cloud Vision front + back photo scan<br>"
-            f"Front OCR Text Found: {'Yes' if front_text else 'No'}<br>"
-            f"Back OCR Text Found: {'Yes' if back_text else 'No'}<br>"
-            f"Certification/Logo Detected: {'Yes' if logo_found else 'No'}"
-        )
-
         result["front_text"] = front_text
         result["back_text"] = back_text
 
@@ -293,19 +280,7 @@ def analyze_barcode():
 
         result = analyze_gluten_label(combined_text, logo_found=False)
         result["product_name"] = product_name
-        result["explanation"] += (
-            f"<br><br>"
-            f"Product: {product_name}<br>"
-            f"Brand: {brand}<br>"
-            f"Detected from: Open Food Facts barcode database<br>"
-            f"Ingredients found: {'Yes' if ingredients else 'No'}<br>"
-            f"Allergen data found: {'Yes' if allergens else 'No'}<br>"
-            f"Trace warning data found: {'Yes' if traces else 'No'}<br>"
-            f"Label data found: {'Yes' if labels else 'No'}<br><br>"
-            f"Why this result happened:<br>"
-            f"The barcode database may have the product name/brand but may not include enough ingredient, allergen, trace, or certification data to make a confident gluten-safety decision.<br>"
-            f"If this says UNKNOWN, use the front/back photo scan so Cloud Vision can read the actual package."
-        )
+       
 
         return jsonify(result)
 
