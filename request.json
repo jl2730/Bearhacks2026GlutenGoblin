@@ -2,21 +2,13 @@
   "requests": [
     {
       "image": {
-        "source": {
-          "imageUri": "https://storage.googleapis.com/bearhacks2026gg/check.png"
-        }
+        "source": { "imageUri": "https://storage.googleapis.com/bearhacks2026gg/gf.jpg" }
       },
       "features": [
-        {
-          "type": "TEXT_DETECTION"
-        },
-        {
-          "type": "LABEL_DETECTION"
-        },
-        {
-          "type": "LOGO_DETECTION"
-        }
+        { "type": "TEXT_DETECTION" },
+        { "type": "LABEL_DETECTION" },
+        { "type": "LOGO_DETECTION" }
       ]
     }
   ]
-}   
+}

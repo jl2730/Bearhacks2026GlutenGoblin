@@ -1,8 +1,28 @@
+import os
 import json
 import subprocess
 
 def analyze_label():
+<<<<<<< HEAD
+def analyze_label():
+    api_key = os.environ.get("GOOGLE_API_KEY")
+
+    if not api_key:
+        print("❌ERROR: API Key not found! Run 'export GOOGLE_API_KEY=your_key' in the terminal.")
+        return
+
     api_key = "AIzaSyB4WY2wfsyJg_-IFOyz51Hv9S0X6FhcI9U"
+=======
+    # Fetch the key from the environment variable we set in Step A
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    
+    if not api_key:
+        print("❌ ERROR: API Key not found! Run 'export GOOGLE_API_KEY=your_key' in the terminal.")
+        return
+
+    # The rest of your curl command remains the same
+    command = f'curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json "https://vision.googleapis.com/v1/images:annotate?key={api_key}"'
+>>>>>>> b93c238ec687818d4db18d29bc7c47d70b25e610
     
     # --- STEP 1: LOAD BLACKLIST ---
     try:
