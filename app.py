@@ -12,7 +12,7 @@ def load_blacklist():
     except FileNotFoundError:
         return ["wheat", "barley", "rye", "malt"]
 
-def analyze_image(image_bytes):
+def analyze_image(image_bytes, front_bytes=None):
     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
     payload = {
         "requests": [{
@@ -45,6 +45,27 @@ def analyze_image(image_bytes):
     elif any(m in all_text for m in ["gfco", "certified gluten", "cca"]):
         has_certification = True
         cert_info = "Certified GF"
+
+    # Also check front image for certification logos if provided
+    if not has_certification and front_bytes:
+        front_b64 = base64.b64encode(front_bytes).decode("utf-8")
+        front_resp = requests.post(
+            f"https://vision.googleapis.com/v1/images:annotate?key={API_KEY}",
+            json={"requests": [{"image": {"content": front_b64}, "features": [{"type": "LOGO_DETECTION"}, {"type": "TEXT_DETECTION"}]}]},
+            timeout=15,
+        )
+        if front_resp.ok:
+            front_response = front_resp.json()["responses"][0]
+            if "logoAnnotations" in front_response:
+                has_certification = True
+                cert_info = "Certified GF"
+            else:
+                front_text = ""
+                if "textAnnotations" in front_response:
+                    front_text = front_response["textAnnotations"][0]["description"].lower()
+                if any(m in front_text for m in ["gfco", "certified gluten", "cca"]):
+                    has_certification = True
+                    cert_info = "Certified GF"
 
     has_claim = "gluten free" in all_text or "gluten-free" in all_text
 
@@ -102,6 +123,7 @@ def analyze_image(image_bytes):
         "certification": cert_info,
         "gf_claim": has_claim,
         "facility_warning": warned_in_may_contain,
+        "found_in_ingredients": found_in_ingredients,
     }
 
 
@@ -111,7 +133,9 @@ def analyze():
     if not file or file.filename == "":
         return jsonify({"error": "No photo uploaded."}), 400
     try:
-        result = analyze_image(file.read())
+        front_file = request.files.get("front_photo")
+        front_bytes = front_file.read() if front_file else None
+        result = analyze_image(file.read(), front_bytes)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
