@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Gluten Goblin</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+
+  <h1>🍞 Gluten Goblin 👹</h1>
+  <p>Scan a barcode or food label and let the goblin inspect it.</p>
+
+  <h3>🔎 Scan Barcode</h3>
+
+  <button id="startScannerBtn">Start Barcode Scanner</button>
+  <button id="stopScannerBtn" style="display:none;">Stop Scanner</button>
+
+  <div id="reader" style="width:300px; display:none;"></div>
+
+  <br><br>
+
+  <input type="text" id="barcodeInput" placeholder="Or enter barcode manually">
+  <button id="barcodeBtn">Ask Goblin by Barcode</button>
+
+  <hr>
+
+  <h3>📸 Photo Backup</h3>
+
+  <button onclick="document.getElementById('frontInput').click()">📸 Take Front Picture</button>
+  <button onclick="document.getElementById('backInput').click()">📸 Take Back Picture</button>
+
+  <input type="file" accept="image/*" capture="environment" id="frontInput" style="display:none;">
+  <input type="file" accept="image/*" capture="environment" id="backInput" style="display:none;">
+
+  <br><br>
+
+  <p>Front Preview:</p>
+  <img id="frontPreview" style="max-width:250px; display:none;" />
+
+  <p>Back Preview:</p>
+  <img id="backPreview" style="max-width:250px; display:none;" />
+
+  <br><br>
+
+  <button id="analyzeBtn" style="display:none;">Ask the Goblin by Photos</button>
+  <br><br>
+
+  <video id="goblinVideo" autoplay muted loop playsinline style="display:none; width:320px;"></video>
+
+  <audio id="safeAudio" src="/static/audio/safe.mp3" preload="auto"></audio>
+  <audio id="cautionAudio" src="/static/audio/caution.mp3" preload="auto"></audio>
+  <audio id="avoidAudio" src="/static/audio/avoid.mp3" preload="auto"></audio>
+  <div id="result"></div>
+
+  <script>
+    let audioUnlocked = false;
+
+    function unlockAudio() {
+      if (audioUnlocked) return;
+
+      const audios = [
+        document.getElementById("safeAudio"),
+        document.getElementById("cautionAudio"),
+        document.getElementById("avoidAudio")
+      ];
+
+      audios.forEach(audio => {
+        audio.muted = true;
+        audio.play()
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+          })
+          .catch(() => {
+            audio.muted = false;
+          });
+      });
+
+      audioUnlocked = true;
+    }
+
+    document.body.addEventListener("click", unlockAudio, { once: true });
+    document.body.addEventListener("touchstart", unlockAudio, { once: true });
+
+
+    let scanner = null;
+    let frontFile = null;
+    let backFile = null;
+
+    const frontPreview = document.getElementById("frontPreview");
+    const backPreview = document.getElementById("backPreview");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const goblinVideo = document.getElementById("goblinVideo");
+    const resultDiv = document.getElementById("result");
+
+    async function playGoblin(status) {
+      const safeAudio = document.getElementById("safeAudio");
+      const cautionAudio = document.getElementById("cautionAudio");
+      const avoidAudio = document.getElementById("avoidAudio");
+
+      safeAudio.pause();
+      cautionAudio.pause();
+      avoidAudio.pause();
+
+      safeAudio.currentTime = 0;
+      cautionAudio.currentTime = 0;
+      avoidAudio.currentTime = 0;
+
+      let audioToPlay;
+
+      if (status === "SAFE") {
+        goblinVideo.src = "/static/videos/goblin-happy.mp4";
+        audioToPlay = safeAudio;
+      } else if (status === "AVOID") {
+        goblinVideo.src = "/static/videos/goblin-scream.mp4";
+        audioToPlay = avoidAudio;
+      } else {
+        goblinVideo.src = "/static/videos/goblin-caution.mp4";
+        audioToPlay = cautionAudio;
+      }
+
+      goblinVideo.style.display = "block";
+      goblinVideo.load();
+
+      try {
+        await goblinVideo.play();
+      } catch (e) {
+        console.log("Video play error:", e);
+      }
+      audioToPlay.pause();
+      audioToPlay.currentTime = 0;
+      audioToPlay.load();
+
+      setTimeout(() => {
+        audioToPlay.play().catch(error => {
+          console.log("Audio play error:", error);
+        });
+      }, 100);
+
+    }
+
+    async function showResult(data) {
+      resultDiv.innerHTML = `
+      <h2>${data.status}</h2>
+      <h3>${data.product_name || ""}</h3>
+      <p>${data.goblin_message}</p>
+      <div>${data.explanation}</div>
+    `;
+
+      await playGoblin(data.status);
+    }
+
+    function checkPhotosReady() {
+      if (frontFile && backFile) {
+        analyzeBtn.style.display = "block";
+      }
+    }
+
+    document.getElementById("frontInput").addEventListener("change", function () {
+      frontFile = this.files[0];
+
+      if (frontFile) {
+        frontPreview.src = URL.createObjectURL(frontFile);
+        frontPreview.style.display = "block";
+        checkPhotosReady();
+      }
+    });
+
+    document.getElementById("backInput").addEventListener("change", function () {
+      backFile = this.files[0];
+
+      if (backFile) {
+        backPreview.src = URL.createObjectURL(backFile);
+        backPreview.style.display = "block";
+        checkPhotosReady();
+      }
+    });
+
+    analyzeBtn.addEventListener("click", async function () {
+      const formData = new FormData();
+      formData.append("front_image", frontFile);
+      formData.append("back_image", backFile);
+
+      resultDiv.innerHTML = "👹 Goblin is inspecting both sides...";
+      goblinVideo.style.display = "none";
+
+      const response = await fetch("/analyze", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+      await showResult(data);
+    });
+
+    async function analyzeBarcode(barcode) {
+      if (!barcode) {
+        resultDiv.innerHTML = "👹 Please enter or scan a barcode first.";
+        return;
+      }
+
+      resultDiv.innerHTML = "👹 Goblin is checking the barcode...";
+      goblinVideo.style.display = "none";
+
+      const response = await fetch("/analyze-barcode", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ barcode: barcode })
+      });
+
+      const data = await response.json();
+      await showResult(data);
+    }
+
+    document.getElementById("barcodeBtn").addEventListener("click", function () {
+      const barcode = document.getElementById("barcodeInput").value.trim();
+      analyzeBarcode(barcode);
+    });
+
+    document.getElementById("startScannerBtn").addEventListener("click", async function () {
+      document.getElementById("reader").style.display = "block";
+      document.getElementById("stopScannerBtn").style.display = "inline-block";
+      resultDiv.innerHTML = "📷 Point camera at barcode...";
+
+      scanner = new Html5Qrcode("reader");
+
+      try {
+        await scanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 12,
+            qrbox: { width: 300, height: 150 },
+            aspectRatio: 1.777,
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.UPC_A,
+              Html5QrcodeSupportedFormats.UPC_E,
+              Html5QrcodeSupportedFormats.CODE_128
+            ]
+          },
+          async function (decodedText) {
+            document.getElementById("barcodeInput").value = decodedText;
+            await scanner.stop();
+            document.getElementById("reader").style.display = "none";
+            document.getElementById("stopScannerBtn").style.display = "none";
+            analyzeBarcode(decodedText);
+          },
+          function () { }
+        );
+      } catch (err) {
+        resultDiv.innerHTML = "❌ Camera scanner failed: " + err;
+      }
+    });
+
+    document.getElementById("stopScannerBtn").addEventListener("click", async function () {
+      if (scanner) {
+        await scanner.stop();
+        document.getElementById("reader").style.display = "none";
+        document.getElementById("stopScannerBtn").style.display = "none";
+      }
+    });
+  </script>
+
+</body>
+
+</html>
