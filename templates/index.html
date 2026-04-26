@@ -102,7 +102,6 @@
     const goblinVideo = document.getElementById("goblinVideo");
     const resultDiv = document.getElementById("result");
 
-    // --- SPEED FIX: COMPRESS IMAGE BEFORE UPLOAD ---
     async function compressImage(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -124,7 +123,6 @@
       });
     }
 
-    // --- MOBILE FIX: UNLOCK AUDIO ---
     function unlockAudio() {
       if (audioUnlocked) return;
       const audios = [document.getElementById("safeAudio"), document.getElementById("cautionAudio"), document.getElementById("avoidAudio")];
@@ -137,6 +135,7 @@
     document.body.addEventListener("click", unlockAudio, { once: true });
     document.body.addEventListener("touchstart", unlockAudio, { once: true });
 
+    // --- INTEGRATED AUDIO/VIDEO LOGIC ---
     async function playGoblin(status) {
       const audios = {
         'SAFE': document.getElementById("safeAudio"),
@@ -152,14 +151,18 @@
       const statusKey = status.toUpperCase();
       const audio = audios[statusKey] || audios['CAUTION'];
       
-      goblinVideo.src = videos[statusKey] || videos['CAUTION'];
-      goblinVideo.style.display = "block";
-      goblinVideo.load();
-
+      // 1. Play the Audio first (it's small and fast)
       try {
-        await goblinVideo.play();
-        setTimeout(() => audio.play(), 150);
-      } catch (e) { console.log("Playback error", e); }
+        audio.play();
+      } catch (e) { console.log("Audio play blocked", e); }
+
+      // 2. Delay the video slightly to ensure audio clears the pipe
+      setTimeout(() => {
+        goblinVideo.src = videos[statusKey] || videos['CAUTION'];
+        goblinVideo.style.display = "block";
+        goblinVideo.load();
+        goblinVideo.play().catch(e => console.log("Video blocked", e));
+      }, 150); 
     }
 
     async function showResult(data) {
@@ -172,10 +175,10 @@
           <div class="explanation">${data.explanation}</div>
         </div>
       `;
+      // Play Goblin media
       await playGoblin(data.status);
     }
 
-    // --- INPUT LISTENERS ---
     document.getElementById("frontInput").addEventListener("change", function() {
       frontFile = this.files[0];
       if (frontFile) { frontPreview.src = URL.createObjectURL(frontFile); frontPreview.style.display = "block"; }
@@ -203,7 +206,7 @@
         await showResult(data);
       } catch (e) {
         document.getElementById("loadingModal").style.display = "none";
-        alert("The goblin is confused by the internet. Try a smaller photo!");
+        alert("The goblin is confused. Try again!");
       }
     });
   </script>
