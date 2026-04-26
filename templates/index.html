@@ -1,15 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Gluten Goblin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/static/style.css">
+  <style>
+    #goblinVideo {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      display: none;
+      background: #000;
+    }
+    .preview {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 2px solid #ddd;
+    }
+    .photo-grid {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .photo-box { flex: 1; text-align: center; }
+    .status-safe { color: #2ecc71; }
+    .status-caution { color: #f1c40f; }
+    .status-avoid { color: #e74c3c; }
+  </style>
 </head>
 
 <body>
   <main class="app">
 
-    <!-- SCAN PAGE -->
     <section id="scanPage">
       <section class="hero">
         <div class="badge">Celiac-friendly label helper</div>
@@ -19,32 +46,31 @@
 
       <section class="card">
         <h2>📸 Scan Product</h2>
-        <p class="helper">Take a photo of the front and back of the package for the best result.</p>
+        <p class="helper">Take a photo of the front and back of the package.</p>
 
         <div class="photo-grid">
           <div class="photo-box">
-            <p>Front of Package</p>
+            <p>Front</p>
             <img id="frontPreview" class="preview" style="display:none;" />
-            <button onclick="document.getElementById('frontInput').click()">Take Front Photo</button>
+            <button class="small-btn" onclick="document.getElementById('frontInput').click()">Take Photo</button>
           </div>
 
           <div class="photo-box">
-            <p>Back / Ingredients</p>
+            <p>Back</p>
             <img id="backPreview" class="preview" style="display:none;" />
-            <button onclick="document.getElementById('backInput').click()">Take Back Photo</button>
+            <button class="small-btn" onclick="document.getElementById('backInput').click()">Take Photo</button>
           </div>
         </div>
 
         <input type="file" accept="image/*" capture="environment" id="frontInput" style="display:none;">
         <input type="file" accept="image/*" capture="environment" id="backInput" style="display:none;">
 
-        <button id="analyzeBtn" class="main-btn" style="display:none;">👹 Ask the Goblin</button>
+        <button id="analyzeBtn" class="main-btn" style="display:none; width: 100%; margin-top: 25px;">👹 Ask the Goblin</button>
       </section>
     </section>
 
-    <!-- RESULT PAGE -->
-    <section id="resultPage" class="result-card" style="display:none;">
-      <video id="goblinVideo" autoplay muted loop playsinline></video>
+    <section id="resultPage" class="result-card" style="display:none; text-align: center;">
+      <video id="goblinVideo" muted loop playsinline></video>
 
       <audio id="safeAudio" src="/static/audio/safe.mp3" preload="auto"></audio>
       <audio id="cautionAudio" src="/static/audio/caution.mp3" preload="auto"></audio>
@@ -52,17 +78,16 @@
 
       <div id="result"></div>
 
-      <button class="secondary-btn" onclick="location.reload()">Scan Another Product</button>
+      <button class="secondary-btn" onclick="location.reload()" style="margin-top: 20px;">Scan Another Product</button>
     </section>
 
   </main>
 
-  <!-- LOADING POPUP -->
   <div id="loadingModal" class="modal" style="display:none;">
     <div class="modal-content">
       <div class="spinner">👹</div>
-      <h2>Goblin is inspecting...</h2>
-      <p>Reading ingredients, warnings, and sneaky gluten clues.</p>
+      <h2>The Goblin is inspecting...</h2>
+      <p>Compressing images and reading labels...</p>
     </div>
   </div>
 
@@ -77,152 +102,109 @@
     const goblinVideo = document.getElementById("goblinVideo");
     const resultDiv = document.getElementById("result");
 
-    function showPage(pageName) {
-      document.getElementById("scanPage").style.display = pageName === "scan" ? "block" : "none";
-      document.getElementById("resultPage").style.display = pageName === "result" ? "block" : "none";
+    // --- SPEED FIX: COMPRESS IMAGE BEFORE UPLOAD ---
+    async function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1024; 
+            const scaleSize = MAX_WIDTH / img.width;
+            canvas.width = MAX_WIDTH;
+            canvas.height = img.height * scaleSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.7);
+          };
+        };
+      });
     }
 
-    function showLoading() {
-      document.getElementById("loadingModal").style.display = "flex";
-    }
-
-    function hideLoading() {
-      document.getElementById("loadingModal").style.display = "none";
-    }
-
+    // --- MOBILE FIX: UNLOCK AUDIO ---
     function unlockAudio() {
       if (audioUnlocked) return;
-
-      const audios = [
-        document.getElementById("safeAudio"),
-        document.getElementById("cautionAudio"),
-        document.getElementById("avoidAudio")
-      ];
-
-      audios.forEach(audio => {
-        audio.muted = true;
-        audio.play()
-          .then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = false;
-          })
-          .catch(() => {
-            audio.muted = false;
-          });
+      const audios = [document.getElementById("safeAudio"), document.getElementById("cautionAudio"), document.getElementById("avoidAudio")];
+      audios.forEach(a => {
+        a.muted = true;
+        a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; });
       });
-
       audioUnlocked = true;
     }
-
     document.body.addEventListener("click", unlockAudio, { once: true });
     document.body.addEventListener("touchstart", unlockAudio, { once: true });
 
     async function playGoblin(status) {
-      const safeAudio = document.getElementById("safeAudio");
-      const cautionAudio = document.getElementById("cautionAudio");
-      const avoidAudio = document.getElementById("avoidAudio");
+      const audios = {
+        'SAFE': document.getElementById("safeAudio"),
+        'AVOID': document.getElementById("avoidAudio"),
+        'CAUTION': document.getElementById("cautionAudio")
+      };
+      const videos = {
+        'SAFE': '/static/videos/goblin-happy.mp4',
+        'AVOID': '/static/videos/goblin-scream.mp4',
+        'CAUTION': '/static/videos/goblin-caution.mp4'
+      };
 
-      status = status.toUpperCase();
-
-      safeAudio.pause();
-      cautionAudio.pause();
-      avoidAudio.pause();
-
-      safeAudio.currentTime = 0;
-      cautionAudio.currentTime = 0;
-      avoidAudio.currentTime = 0;
-
-      let audioToPlay;
-
-      if (status === "SAFE") {
-        goblinVideo.src = "/static/videos/goblin-happy.mp4";
-        audioToPlay = safeAudio;
-      } else if (status === "AVOID") {
-        goblinVideo.src = "/static/videos/goblin-scream.mp4";
-        audioToPlay = avoidAudio;
-      } else {
-        goblinVideo.src = "/static/videos/goblin-caution.mp4";
-        audioToPlay = cautionAudio;
-      }
-
+      const statusKey = status.toUpperCase();
+      const audio = audios[statusKey] || audios['CAUTION'];
+      
+      goblinVideo.src = videos[statusKey] || videos['CAUTION'];
       goblinVideo.style.display = "block";
       goblinVideo.load();
 
       try {
         await goblinVideo.play();
-      } catch (e) {
-        console.log("Video play error:", e);
-      }
-
-      audioToPlay.pause();
-      audioToPlay.currentTime = 0;
-      audioToPlay.load();
-
-      setTimeout(() => {
-        audioToPlay.play().catch(error => {
-          console.log("Audio play error:", error);
-        });
-      }, 100);
+        setTimeout(() => audio.play(), 150);
+      } catch (e) { console.log("Playback error", e); }
     }
 
     async function showResult(data) {
-      showPage("result");
-
+      document.getElementById("scanPage").style.display = "none";
+      document.getElementById("resultPage").style.display = "block";
       resultDiv.innerHTML = `
         <div class="answer">
-          <h2>${data.headline || data.status}</h2>
-          <h3>${data.product_name || ""}</h3>
-          <p class="goblin-line">${data.goblin_message}</p>
+          <h2 class="status-${data.status.toLowerCase()}">${data.headline}</h2>
+          <p class="goblin-line">"${data.goblin_message}"</p>
           <div class="explanation">${data.explanation}</div>
         </div>
       `;
-
       await playGoblin(data.status);
     }
 
-    function checkPhotosReady() {
-      if (frontFile && backFile) {
-        analyzeBtn.style.display = "block";
-      }
-    }
-
-    document.getElementById("frontInput").addEventListener("change", function () {
+    // --- INPUT LISTENERS ---
+    document.getElementById("frontInput").addEventListener("change", function() {
       frontFile = this.files[0];
-
-      if (frontFile) {
-        frontPreview.src = URL.createObjectURL(frontFile);
-        frontPreview.style.display = "block";
-        checkPhotosReady();
-      }
+      if (frontFile) { frontPreview.src = URL.createObjectURL(frontFile); frontPreview.style.display = "block"; }
+      if (frontFile && backFile) analyzeBtn.style.display = "block";
     });
 
-    document.getElementById("backInput").addEventListener("change", function () {
+    document.getElementById("backInput").addEventListener("change", function() {
       backFile = this.files[0];
-
-      if (backFile) {
-        backPreview.src = URL.createObjectURL(backFile);
-        backPreview.style.display = "block";
-        checkPhotosReady();
-      }
+      if (backFile) { backPreview.src = URL.createObjectURL(backFile); backPreview.style.display = "block"; }
+      if (frontFile && backFile) analyzeBtn.style.display = "block";
     });
 
-    analyzeBtn.addEventListener("click", async function () {
-      const formData = new FormData();
-      formData.append("front_image", frontFile);
-      formData.append("back_image", backFile);
+    analyzeBtn.addEventListener("click", async function() {
+      document.getElementById("loadingModal").style.display = "flex";
+      try {
+        const cFront = await compressImage(frontFile);
+        const cBack = await compressImage(backFile);
+        const fd = new FormData();
+        fd.append("front_image", cFront, "f.jpg");
+        fd.append("back_image", cBack, "b.jpg");
 
-      showLoading();
-
-      const response = await fetch("/analyze", {
-        method: "POST",
-        body: formData
-      });
-
-      const data = await response.json();
-
-      hideLoading();
-      await showResult(data);
+        const res = await fetch("/analyze", { method: "POST", body: fd });
+        const data = await res.json();
+        document.getElementById("loadingModal").style.display = "none";
+        await showResult(data);
+      } catch (e) {
+        document.getElementById("loadingModal").style.display = "none";
+        alert("The goblin is confused by the internet. Try a smaller photo!");
+      }
     });
   </script>
 </body>
