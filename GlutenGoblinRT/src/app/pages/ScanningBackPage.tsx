@@ -6,7 +6,7 @@ import imgCameraBtn from "../../imports/ScanningBack/f7df4b79e3284ba185e1f1624ff
 
 function mapStatus(status: string): "pass" | "fail" | "caution" {
   if (status === "SAFE") return "pass";
-  if (status === "NOT SAFE") return "fail";
+  if (status === "NOT SAFE" || status === "AVOID") return "fail";
   return "caution";
 }
 
@@ -32,9 +32,9 @@ export default function ScanningBackPage() {
     setAnalyzing(true);
 
     const formData = new FormData();
-    formData.append("photo", file);
+    formData.append("back_image", file);
     const frontPhoto = getFrontPhoto();
-    if (frontPhoto) formData.append("front_photo", frontPhoto);
+    if (frontPhoto) formData.append("front_image", frontPhoto);
     clearFrontPhoto();
 
     try {

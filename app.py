@@ -6,7 +6,8 @@ from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-VISION_API_KEY = os.environ.get("VISION_API_KEY")
+#VISION_API_KEY = os.environ.get("VISION_API_KEY")
+VISION_API_KEY = "AIzaSyAA5_SEGOqVI_rq3VOgcl6UpuE_BgY3xzM"
 
 
 @app.route("/")

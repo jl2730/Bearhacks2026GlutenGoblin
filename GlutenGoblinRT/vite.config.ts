@@ -37,7 +37,7 @@ export default defineConfig({
   server: {
     host: true,
     proxy: {
-      '/analyze': 'http://localhost:5000',
+      '/analyze': 'http://localhost:8080',
     },
   },
 })
