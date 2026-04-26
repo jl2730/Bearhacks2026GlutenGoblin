@@ -121,6 +121,7 @@ def analyze_gluten_label(label_text, logo_found):
         return {
             "status": "AVOID",
             "goblin_message": "🚫 THE GOBLIN SCREAMS! Back away from the snack!",
+            "found_in_ingredients": found_in_ingredients,
             "explanation": (
                 f"🛡️ GLUTEN-FREE SAFETY ANALYSIS REPORT<br><br>"
                 f"🔴 STATUS: NOT SAFE<br>"

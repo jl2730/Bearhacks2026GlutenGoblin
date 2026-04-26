@@ -23,7 +23,7 @@ const RESULT_CONFIG: Record<ResultType, ResultConfig> = {
     subheadline: "looks safe for our goblin :)",
     infoText: "No gluten detected — you're good to go. Enjoy your food!",
     allergens: [],
-    videoSrc: "/videos/goblinHappy.webm",
+    videoSrc: "/videos/goblinHappyBG.webm",
     soundSrc: "/sounds/safe.mp3",
   },
   fail: {
@@ -33,7 +33,7 @@ const RESULT_CONFIG: Record<ResultType, ResultConfig> = {
     subheadline: "This is not safe for your goblin",
     infoText: "Gluten detected — don't eat this. Try finding a safer alternative.",
     allergens: ["Wheat", "Gluten (Barley)"],
-    videoSrc: "/videos/goblinAngry.webm",
+    videoSrc: "/videos/goblinAngryBG.webm",
     soundSrc: "/sounds/avoid.mp3",
   },
   caution: {
@@ -43,8 +43,8 @@ const RESULT_CONFIG: Record<ResultType, ResultConfig> = {
     subheadline: "This may not be safe for your goblin",
     infoText: "Possible gluten detected — the label isn't clear, so take a closer look to be safe.",
     allergens: ["May contain: Oats", "May contain: Wheat traces"],
-    videoSrc: "/videos/goblinCautious.webm",
-    soundSrc: null,
+    videoSrc: "/videos/goblinCautiousBG.webm",
+    soundSrc: "/sounds/caution.mp3",
   },
 };
 
