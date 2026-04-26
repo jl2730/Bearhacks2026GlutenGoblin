@@ -25,7 +25,7 @@ The user takes two photos: the **Front of the Package** and the **Ingredients Li
 | **AI/Vision** | Google Vision API | Text, Logo, and Label Detection. |
 | **Hosting** | Vultr Cloud | High-performance cloud hosting. |
 | **Infrastructure** | Nginx + DuckDNS | Reverse proxy and SSL/HTTPS for camera access. |
-| **Media** | Static MP3 & MP4 | Native goblin reactions for user feedback. |
+| **Media** | Eleven Labs | Generated static MP3 and MP4 assets to provide native, low-latency "Goblin" reactions for real-time user feedback. |
 
 ---
 
