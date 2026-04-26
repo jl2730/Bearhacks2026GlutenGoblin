@@ -179,12 +179,15 @@ def analyze_gluten_label(label_text, logo_found):
         "headline": "⚪ NEEDS REVIEW",
         "goblin_message": "🤔 The goblin needs more clues.",
         "explanation": """
-        Not enough information was available to decide safely.<br><br>
+        The goblin could not confirm this product from the photos.<br><br>
+
         <b>Why:</b><br>
-        • Missing ingredient or certification data<br>
-        • Barcode database may be incomplete<br><br>
+        • Ingredients or allergen warnings may be blurry/incomplete<br>
+        • Certification marks may not be visible<br>
+        • Some gluten risks depend on manufacturing details<br><br>
+
         <b>Goblin Tip:</b><br>
-        Try the front/back photo scan for better accuracy.
+        Retake clear photos of the ingredients list and allergen statement, or check the brand’s official product page.
         """
     }
 
@@ -210,7 +213,12 @@ def analyze():
         combined_text = f"{front_text} {back_text}"
         logo_found = front_logo or back_logo
 
-        result = analyze_gluten_label(combined_text, logo_found)
+        result = analyze_gluten_label(combined_text, logo_found) or {
+            "status": "UNKNOWN",
+            "headline": "⚪ NEEDS REVIEW",
+            "goblin_message": "🤔 The goblin needs more clues.",
+            "explanation": "Retake clearer front and back photos."
+            }
 
         result["product_name"] = "Photo Scan Result"
         result["front_text"] = front_text
